@@ -1,0 +1,233 @@
+// Layout — named callable components composed from per-category font bundles + theme.
+//
+// Each component belongs to a category (`body`, `heading`, or `code`). Each category gets a
+// font bundle — `{ family, scale, profile }` — that determines:
+//   - which typeface family the component uses
+//   - which scale produces its sizes
+//   - which optical profile produces its tracking / leading / word-space
+//
+// Override at three layers, low → high precedence:
+//   1. Built-in component defaults (the `_build-specs` function below)
+//   2. Per-component overrides at make time:  overrides: (heading-1: (...))
+//   3. Per-call named arguments:              heading-1(weight: 800)[...]
+//
+// Meta-override keys — `scale`, `font-profile`, `measure`, `step` — trigger recomputation
+// of size / tracking / spacing / leading from the new inputs.
+//
+// Any override value of `auto` is filtered out before merging — treated as
+// "use the default that would otherwise apply." Partial override dicts compose cleanly.
+//
+// Usage:
+//   #let l = layout.make()                                  // serif body + heading, mono code
+//   #let (heading-1, text-3, link, emphasis, strong, code, code-block, quote, figure-caption,
+//         list, enum, figure) = l
+//   #show: l.page
+//   #show: l.markup
+//   = Heading
+//   Body with *bold* and _italic_ and `code`.
+//
+// Switch to a different bundle per category:
+//   #let l = layout.make(
+//     fonts: (
+//       body:    font.bundles.serif,
+//       heading: font.bundles.sans,
+//     ),
+//   )
+//
+// Override family only (keep bundle's scale + profile):
+//   #let l = layout.make(
+//     fonts: (
+//       body: (..font.bundles.serif, family: "Source Serif Pro"),
+//     ),
+//   )
+
+#import "scale.typ"
+#import "font.typ"
+#import "rhythm.typ"
+#import "theme.typ"
+#import "utils.typ"
+
+// Capture scale.make + scale.presets at module load so they survive `scale` shadowing inside make().
+#let _scale-make = scale.make
+#let _scale-presets = scale.presets
+
+// ─── Component registry ────────────────────────────────────────────────────────
+// Each entry: step | none, category (body/heading/code), default param dict, render fn.
+
+#let _build-specs(t, r) = (
+  text-1:         (step: -2,   category: "body",    defaults: (fill: t.fg-muted),                        render: utils.render-text),
+  text-2:         (step: -1,   category: "body",    defaults: (fill: t.fg),                              render: utils.render-text),
+  text-3:         (step: 0,    category: "body",    defaults: (fill: t.fg),                              render: utils.render-text),
+  text-4:         (step: 1,    category: "body",    defaults: (fill: t.fg),                              render: utils.render-text),
+  text-5:         (step: 2,    category: "body",    defaults: (fill: t.fg),                              render: utils.render-text),
+  heading-1:      (step: 4,    category: "heading", defaults: (weight: 700, fill: t.fg, above: r.p4, below: r.p2), render: utils.render-text),
+  heading-2:      (step: 3,    category: "heading", defaults: (weight: 600, fill: t.fg, above: r.p3, below: r.p1), render: utils.render-text),
+  heading-3:      (step: 2,    category: "heading", defaults: (weight: 600, fill: t.fg, above: r.p2, below: r.base), render: utils.render-text),
+  heading-4:      (step: 1,    category: "heading", defaults: (weight: 600, fill: t.fg, above: r.p1, below: r.base), render: utils.render-text),
+  link:           (step: none, category: "body",    defaults: (fill: t.link),                            render: utils.render-link),
+  emphasis:       (step: none, category: "body",    defaults: (style: "italic", fill: t.fg),             render: utils.render-text),
+  strong:         (step: none, category: "body",    defaults: (weight: 700, fill: t.fg),                 render: utils.render-text),
+  code:           (step: none, category: "code",    defaults: (fill: t.code-fg),                         render: utils.render-text),
+  code-block:     (step: 0,    category: "code",    defaults: (
+                                  fill: t.code-fg,
+                                  block-fill: t.code-bg,
+                                  block-inset: 1em,
+                                  block-radius: 4pt,
+                                ),                                                                       render: utils.render-code-block),
+  quote:          (step: 0,    category: "body",    defaults: (style: "italic", fill: t.fg, block-inset: (left: 2em), block-fill: t.quote-bg), render: utils.render-quote),
+  figure-caption: (step: -2,   category: "body",    defaults: (style: "italic", fill: t.fg-muted),       render: utils.render-figure-caption),
+  list:           (step: 0,    category: "body",    defaults: (fill: t.fg),                              render: utils.render-list),
+  enum:           (step: 0,    category: "body",    defaults: (fill: t.fg),                              render: utils.render-enum),
+  figure:         (step: none, category: "body",    defaults: (:),                                       render: utils.render-figure),
+  divider:        (step: none, category: "body",    defaults: (stroke: 0.5pt + t.rule, length: 100%),    render: utils.render-divider),
+  footnote-entry: (step: -2,   category: "body",    defaults: (fill: t.fg-muted),                        render: utils.render-text),
+)
+
+// ─── Defaults ─────────────────────────────────────────────────────────────────
+
+#let _default-fonts = (
+  body:    font.bundles.serif,
+  heading: font.bundles.serif,
+  code:    font.bundles.mono,
+)
+
+#let _default-page = (
+  paper: "us-letter",
+  margin: 1in,
+  numbering: none,
+)
+
+// ─── Public API ────────────────────────────────────────────────────────────────
+
+#let make(
+  theme: theme.presets.light,
+  theme-overrides: (:),
+  scale: auto,
+  base: 11pt,
+  measure: 65,
+  justify: false,
+  fonts: (:),
+  page: (:),
+  overrides: (:),
+) = {
+  let theme = theme + theme-overrides
+
+  // Resolve top-level scale: string → preset lookup; dict → use directly; auto → use bundle defaults.
+  let global-scale = if scale == auto {
+    auto
+  } else if type(scale) == str {
+    _scale-presets.at(scale)
+  } else {
+    scale
+  }
+
+  // Rebuild a scale dict with the user's base, keeping its ratio + n.
+  let with-base = s => _scale-make(base: base, ratio: s.params.ratio, n: s.params.n)
+
+  // Merge user fonts with defaults, per category. Apply global scale (if set), then global base.
+  let resolved-fonts = (:)
+  for (cat, default-bundle) in _default-fonts {
+    let user-bundle = fonts.at(cat, default: (:))
+    let merged = default-bundle + user-bundle
+    if global-scale != auto {
+      merged.insert("scale", global-scale)
+    }
+    merged.insert("scale", with-base(merged.scale))
+    resolved-fonts.insert(cat, merged)
+  }
+
+  let body-bundle = resolved-fonts.body
+  let r = rhythm.make(scale: body-bundle.scale, font: body-bundle.profile, measure: measure)
+  let specs = _build-specs(theme, r.spacing)
+  let merged-page = _default-page + (fill: theme.bg) + page
+
+  let result = (:)
+  for (name, spec) in specs {
+    let cat-bundle = resolved-fonts.at(spec.category)
+    let cat-state = (
+      scale: cat-bundle.scale,
+      font: cat-bundle.profile,
+      measure: measure,
+    )
+    // Family becomes a text-param default; component overrides win over it.
+    let cat-defaults = (font: cat-bundle.family) + spec.defaults
+    let merged-spec = (
+      step: spec.step,
+      defaults: cat-defaults,
+      render: spec.render,
+    )
+    let comp-overrides = overrides.at(name, default: (:))
+    result.insert(name, utils.make-component(cat-state, merged-spec, comp-overrides))
+  }
+
+  // Page rule — applies page settings and sets default text font/fill from body bundle.
+  let page-rule = body => {
+    set std.page(..merged-page)
+    set text(font: body-bundle.family, fill: theme.fg)
+    body
+  }
+  result.insert("page", page-rule)
+
+  // Markup rule — binds native Typst elements to our components. Apply via
+  // `#show: l.markup`. Body defaults match text-3 (body-category scale step 0).
+  let body-size = (body-bundle.scale.size)(0)
+  let body-tracking = (body-bundle.profile.tracking)(body-size)
+  let body-spacing = (body-bundle.profile.word-space)(body-size)
+  let body-leading = (body-bundle.profile.leading)(body-size, measure: measure)
+
+  let markup-rule = body => {
+    // ── set rules ──
+    set text(
+      font: body-bundle.family,
+      size: body-size,
+      tracking: body-tracking,
+      spacing: body-spacing,
+      fill: theme.fg,
+    )
+    set par(leading: body-leading, justify: justify)
+    set std.footnote.entry(
+      separator: line(length: 30%, stroke: 0.5pt + theme.rule),
+      clearance: 1em,
+      gap: 0.5em,
+      indent: 1em,
+    )
+
+    // ── show rules: native Typst elements → our components ──
+    show std.heading.where(level: 1): it => (result.heading-1)(it.body)
+    show std.heading.where(level: 2): it => (result.heading-2)(it.body)
+    show std.heading.where(level: 3): it => (result.heading-3)(it.body)
+    show std.heading.where(level: 4): it => (result.heading-4)(it.body)
+    show std.strong: it => (result.strong)(it.body)
+    show std.emph: it => (result.emphasis)(it.body)
+    // `link` styling — break recursion by detecting an already-underlined body.
+    // First pass wraps in underline + colored text + re-emits link to preserve
+    // click semantics. Second pass sees body is already an underline element
+    // and passes through.
+    show std.link: it => if it.body.func() == underline {
+      it
+    } else {
+      link(it.dest, underline(
+        stroke: 0.5pt + theme.link,
+        text(fill: theme.link, it.body),
+      ))
+    }
+    show std.raw.where(block: false): it => (result.code)(it)
+    show std.raw.where(block: true): it => (result.code-block)(it)
+    show std.list: it => (result.list)(it)
+    show std.enum: it => (result.enum)(it)
+    show std.quote: it => (result.quote)(attribution: it.attribution, it.body)
+    show std.figure.caption: it => (result.figure-caption)(it.body)
+    show std.footnote.entry: it => (result.footnote-entry)(it)
+    // `figure` itself isn't bound — our figure component re-emits a figure
+    // element, which would recurse. Use `#figure-comp(...)` explicitly.
+
+    body
+  }
+  result.insert("markup", markup-rule)
+
+  result.insert("theme", theme)
+  result.insert("scale", resolved-fonts.body.scale)
+  result.insert("rhythm", r)
+
+  result
+}

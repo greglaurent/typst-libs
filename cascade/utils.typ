@@ -4,10 +4,16 @@
 // All names here are intended to be called from other style files; they have no
 // leading underscore.
 
-// No per-call or per-component overrides for typography fundamentals like scale,
-// font-profile, or measure. Those are configured once at `layout.make()` time.
-// Per-call args are only style tweaks (weight, fill, size, tracking, etc.).
-#let _meta-keys = ()
+// Meta-keys trigger recomputation of size + tracking + word-space + leading
+// from scale/font/measure. Other args are passed through as plain style tweaks.
+// `step` lets a component sit at a different scale step coherently.
+// `size` overrides the size directly; tracking/word-space/leading are recomputed
+// from the given size against the active font profile.
+// Pass either per-call (`text-3(size: 14pt)[...]`), via `overrides:` at make
+// time, or at the `fonts.<category>.` layer (applies to every component in
+// that category). `scale`, `font-profile`, and `measure` remain configured
+// once at `layout.make()`.
+#let _meta-keys = ("step", "size")
 
 #let filter-auto(d) = {
   let r = (:)
@@ -183,20 +189,46 @@
 // per-component overrides, per-call args), handles meta-key recomputation, and
 // dispatches to the spec's render function.
 
-#let make-component(state, spec, comp-overrides) = {
-  let step = spec.step
-  let base-defaults = spec.defaults + filter-auto(comp-overrides)
-  let computed = if step == none {
-    (:)
-  } else {
-    compute(step, state.scale, state.font, state.measure)
+#let _from-size(s, spec-step, font, measure) = {
+  let r = (
+    size: s,
+    tracking: (font.tracking)(s),
+    spacing: (font.word-space)(s),
+  )
+  // Leading is paragraph-level — only emit it for block-y components (those with a step).
+  // Inline components (step: none) wrapped in `set par(leading: …)` would force a line break.
+  if spec-step != none {
+    r.insert("leading", (font.leading)(s, measure: measure))
   }
+  r
+}
+
+#let _compute-meta(meta, spec-step, state) = {
+  if "size" in meta {
+    _from-size(meta.size, spec-step, state.font, state.measure)
+  } else {
+    let step = meta.at("step", default: spec-step)
+    if step == none { (:) } else {
+      compute(step, state.scale, state.font, state.measure)
+    }
+  }
+}
+
+#let make-component(state, spec, comp-overrides) = {
+  let split-ov = split-meta(filter-auto(comp-overrides))
+  let computed = _compute-meta(split-ov.meta, spec.step, state)
+  let base-defaults = spec.defaults + split-ov.real
   let comp-base = computed + base-defaults
 
   (..args) => {
     let body = args.pos().at(0, default: [])
-    let cleaned-call = filter-auto(args.named())
-    let final = comp-base + cleaned-call
+    let split-call = split-meta(filter-auto(args.named()))
+    let recomputed = if split-call.meta.len() > 0 {
+      _compute-meta(split-call.meta, spec.step, state)
+    } else {
+      (:)
+    }
+    let final = comp-base + recomputed + split-call.real
     (spec.render)(final, body)
   }
 }

@@ -106,6 +106,7 @@
   base: 11pt,
   measure: 65,
   justify: false,
+  font: none,
   fonts: (:),
   page: (:),
   overrides: (:),
@@ -125,15 +126,38 @@
   let with-base = s => _scale-make(base: base, ratio: s.params.ratio, n: s.params.n)
 
   // Merge user fonts with defaults, per category. Apply global scale (if set), then global base.
+  // Top-level `font:` sets the family across every category as a shortcut; per-category
+  // `fonts.<cat>.family` still wins for explicit overrides.
+  //
+  // Within `fonts.<cat>`:
+  //   - `family` / `scale` / `profile` configure the bundle itself.
+  //   - `size` rebuilds the bundle's scale with that size as the new base, so every
+  //     component in the category recomputes coherently from its step.
+  //   - any other keys (`weight`, `fill`, etc.) are collected as per-category overrides
+  //     applied to every component. Per-component `overrides:` beat these; per-call args
+  //     beat both.
+  let _bundle-keys = ("family", "scale", "profile")
   let resolved-fonts = (:)
+  let cat-overrides = (:)
   for (cat, default-bundle) in _default-fonts {
     let user-bundle = fonts.at(cat, default: (:))
-    let merged = default-bundle + user-bundle
+    let bundle-cfg = (:)
+    let cat-ov = (:)
+    let cat-base = none
+    for (k, v) in user-bundle {
+      if _bundle-keys.contains(k) { bundle-cfg.insert(k, v) }
+      else if k == "size" { cat-base = v }
+      else { cat-ov.insert(k, v) }
+    }
+    let base-bundle = if font != none { default-bundle + (family: font) } else { default-bundle }
+    let merged = base-bundle + bundle-cfg
     if global-scale != auto {
       merged.insert("scale", global-scale)
     }
-    merged.insert("scale", with-base(merged.scale))
+    let scale-base = if cat-base != none { cat-base } else { base }
+    merged.insert("scale", _scale-make(base: scale-base, ratio: merged.scale.params.ratio, n: merged.scale.params.n))
     resolved-fonts.insert(cat, merged)
+    cat-overrides.insert(cat, cat-ov)
   }
 
   let body-bundle = resolved-fonts.body
@@ -156,7 +180,8 @@
       defaults: cat-defaults,
       render: spec.render,
     )
-    let comp-overrides = overrides.at(name, default: (:))
+    let cat-ov = cat-overrides.at(spec.category, default: (:))
+    let comp-overrides = cat-ov + overrides.at(name, default: (:))
     result.insert(name, utils.make-component(cat-state, merged-spec, comp-overrides))
   }
 

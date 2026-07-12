@@ -105,6 +105,7 @@
   scale: auto,
   base: 11pt,
   measure: 65,
+  size-min: 8pt,   // readability floor for small roles; set 0pt to disable
   justify: false,
   font: none,
   fonts: (:),
@@ -172,6 +173,7 @@
       scale: cat-bundle.scale,
       font: cat-bundle.profile,
       measure: measure,
+      size-min: size-min,
     )
     // Family becomes a text-param default; component overrides win over it.
     let cat-defaults = (font: cat-bundle.family) + spec.defaults

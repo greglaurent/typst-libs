@@ -33,8 +33,10 @@
   (meta: meta, real: real)
 }
 
-#let compute(step, scale, font, measure) = {
-  let size = (scale.size)(step)
+#let compute(step, scale, font, measure, size-min: 0pt) = {
+  // Readability floor: never smaller than size-min (a rendering concern, not the
+  // scale — scale.size stays pure). Optical is recomputed from the floored size.
+  let size = calc.max((scale.size)(step), size-min)
   (
     size: size,
     tracking: (font.tracking)(size),
@@ -209,7 +211,7 @@
   } else {
     let step = meta.at("step", default: spec-step)
     if step == none { (:) } else {
-      compute(step, state.scale, state.font, state.measure)
+      compute(step, state.scale, state.font, state.measure, size-min: state.at("size-min", default: 0pt))
     }
   }
 }

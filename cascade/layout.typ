@@ -209,7 +209,9 @@
       spacing: body-spacing,
       fill: theme.fg,
     )
-    set par(leading: body-leading, justify: justify)
+    // Paragraph spacing derives from the rhythm baseline (one line), so inter-
+    // paragraph gaps stay on the vertical grid instead of Typst's default.
+    set par(leading: body-leading, justify: justify, spacing: r.baseline)
     set std.footnote.entry(
       separator: line(length: 30%, stroke: 0.5pt + theme.rule),
       clearance: 1em,

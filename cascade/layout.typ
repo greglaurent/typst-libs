@@ -1,24 +1,21 @@
-// Layout — named callable components composed from per-category font bundles + theme.
+// Layout — named callable components composed from the cascade foundation + a theme.
 //
-// Each component belongs to a category (`body`, `heading`, or `code`). Each category gets a
-// font bundle — `{ family, scale, profile }` — that determines:
-//   - which typeface family the component uses
-//   - which scale produces its sizes
-//   - which optical profile produces its tracking / leading / word-space
+// This module owns COMPOSITION, not typography. Every size / tracking / word-space / line box comes
+// from the cascade foundation (`foundation.typ`, projected from the one spec); layout only decides
+// which document roles exist, their steps and spacing, and how native Typst elements bind to them.
 //
-// Override at three layers, low → high precedence:
-//   1. Built-in component defaults (the `_build-specs` function below)
+// Each component belongs to a category (`body`, `heading`, or `code`) — the foundation font role it
+// reads. Override at three layers, low → high precedence:
+//   1. Built-in component defaults (`_build-specs` below)
 //   2. Per-component overrides at make time:  overrides: (heading-1: (...))
 //   3. Per-call named arguments:              heading-1(weight: 800)[...]
 //
-// Meta-override keys — `scale`, `font-profile`, `measure`, `step` — trigger recomputation
-// of size / tracking / spacing / leading from the new inputs.
-//
-// Any override value of `auto` is filtered out before merging — treated as
-// "use the default that would otherwise apply." Partial override dicts compose cleanly.
+// Meta-override keys — `step`, `size` — trigger recomputation of size / tracking / word-space / line
+// box from the foundation. Any override value of `auto` is filtered out before merging (treated as
+// "use the default that would otherwise apply"). Partial override dicts compose cleanly.
 //
 // Usage:
-//   #let l = layout.make()                                  // serif body + heading, mono code
+//   #let l = layout.make()                                  // foundation defaults
 //   #let (heading-1, text-3, link, emphasis, strong, code, code-block, quote, figure-caption,
 //         list, enum, figure) = l
 //   #show: l.page
@@ -26,44 +23,45 @@
 //   = Heading
 //   Body with *bold* and _italic_ and `code`.
 //
-// Switch to a different bundle per category:
-//   #let l = layout.make(
-//     fonts: (
-//       body:    font.bundles.serif,
-//       heading: font.bundles.sans,
-//     ),
-//   )
+// Configure the foundation through make() — these pass straight to `foundation.resolve`:
+//   #let l = layout.make(base: 12pt, measure: 72, scale: "golden-ratio")
 //
-// Override family only (keep bundle's scale + profile):
-//   #let l = layout.make(
-//     fonts: (
-//       body: (..font.bundles.serif, family: "Source Serif Pro"),
-//     ),
-//   )
+// Swap a typeface (metrics deep-merge from the foundation default for that role):
+//   #let l = layout.make(fonts: (heading: "Inter"))              // family only
+//   #let l = layout.make(fonts: (body: (family: "EB Garamond", xh: 0.48)))  // family + measured metric
+//   #let l = layout.make(font: "Charter")                        // one family across every role
 
-#import "scale.typ"
-#import "font.typ"
-#import "rhythm.typ"
+#import "foundation.typ" as cascade
 #import "theme.typ"
 #import "utils.typ"
 
-// Capture scale.make + scale.presets at module load so they survive `scale` shadowing inside make().
-#let _scale-make = scale.make
-#let _scale-presets = scale.presets
+// Consumer-side sugar: modular-scale preset names → the foundation's (ratio, n). The foundation
+// itself only knows ratio/n; these are convenience labels. `auto` means "the foundation default".
+#let _scale-presets = (
+  classical:      (ratio: 2, n: 5),
+  golden-ratio:   (ratio: 1.6180339887498949, n: 1),
+  golden-ditonic: (ratio: 1.6180339887498949, n: 2),
+  tritonic:       (ratio: 2, n: 3),
+  tetratonic:     (ratio: 2, n: 4),
+  major-third:    (ratio: 1.25, n: 1),
+  minor-third:    (ratio: 1.2, n: 1),
+)
 
 // ─── Component registry ────────────────────────────────────────────────────────
-// Each entry: step | none, category (body/heading/code), default param dict, render fn.
+// Each entry: step | none, category (foundation font role), default param dict, render fn. Spacing
+// (`above`/`below`) is drawn from the foundation's rhythm via `space(s, tok)` — one line = "baseline",
+// grid multiples = "0"/"p1"…"p6"/"n1".
 
-#let _build-specs(t, r) = (
+#let _build-specs(t, s) = (
   text-1:         (step: -2,   category: "body",    defaults: (fill: t.fg-muted),                        render: utils.render-text),
   text-2:         (step: -1,   category: "body",    defaults: (fill: t.fg),                              render: utils.render-text),
   text-3:         (step: 0,    category: "body",    defaults: (fill: t.fg),                              render: utils.render-text),
   text-4:         (step: 1,    category: "body",    defaults: (fill: t.fg),                              render: utils.render-text),
   text-5:         (step: 2,    category: "body",    defaults: (fill: t.fg),                              render: utils.render-text),
-  heading-1:      (step: 4,    category: "heading", defaults: (weight: 700, fill: t.fg, above: r.p4, below: r.p2), render: utils.render-text),
-  heading-2:      (step: 3,    category: "heading", defaults: (weight: 600, fill: t.fg, above: r.p3, below: r.p1), render: utils.render-text),
-  heading-3:      (step: 2,    category: "heading", defaults: (weight: 600, fill: t.fg, above: r.p2, below: r.base), render: utils.render-text),
-  heading-4:      (step: 1,    category: "heading", defaults: (weight: 600, fill: t.fg, above: r.p1, below: r.base), render: utils.render-text),
+  heading-1:      (step: 4,    category: "heading", defaults: (weight: 700, fill: t.fg, above: cascade.space(s, "p4"), below: cascade.space(s, "p2")), render: utils.render-text),
+  heading-2:      (step: 3,    category: "heading", defaults: (weight: 600, fill: t.fg, above: cascade.space(s, "p3"), below: cascade.space(s, "p1")), render: utils.render-text),
+  heading-3:      (step: 2,    category: "heading", defaults: (weight: 600, fill: t.fg, above: cascade.space(s, "p2"), below: cascade.space(s, "0")),  render: utils.render-text),
+  heading-4:      (step: 1,    category: "heading", defaults: (weight: 600, fill: t.fg, above: cascade.space(s, "p1"), below: cascade.space(s, "0")),  render: utils.render-text),
   link:           (step: none, category: "body",    defaults: (fill: t.link),                            render: utils.render-link),
   emphasis:       (step: none, category: "body",    defaults: (style: "italic", fill: t.fg),             render: utils.render-text),
   strong:         (step: none, category: "body",    defaults: (weight: 700, fill: t.fg),                 render: utils.render-text),
@@ -85,12 +83,6 @@
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
-#let _default-fonts = (
-  body:    font.bundles.serif,
-  heading: font.bundles.serif,
-  code:    font.bundles.mono,
-)
-
 #let _default-page = (
   paper: "us-letter",
   margin: 1in,
@@ -98,122 +90,96 @@
 )
 
 // ─── Public API ────────────────────────────────────────────────────────────────
+// `base`/`measure`/`scale`/`size-min`/`font`/`fonts` default to `auto` — i.e. defer to the
+// foundation's own defaults; only what you set is passed to `foundation.resolve`.
 
 #let make(
   theme: theme.presets.light,
   theme-overrides: (:),
   scale: auto,
-  base: 11pt,
-  measure: 65,
-  size-min: 8pt,   // readability floor for small roles; set 0pt to disable
+  base: auto,
+  measure: auto,
+  size-min: auto,
   justify: false,
-  font: none,
+  font: auto,
   fonts: (:),
   page: (:),
   overrides: (:),
 ) = {
   let theme = theme + theme-overrides
 
-  // Resolve top-level scale: string → preset lookup; dict → use directly; auto → use bundle defaults.
-  let global-scale = if scale == auto {
-    auto
-  } else if type(scale) == str {
-    _scale-presets.at(scale)
-  } else {
-    scale
+  // ── build the foundation-config overrides from the make() params ──
+  let user = (:)
+  if base != auto { user.insert("base", base) }
+  if measure != auto { user.insert("measure", measure) }
+  if size-min != auto { user.insert("size-min", size-min) }
+  // scale: a preset name → (ratio, n), or a dict carrying ratio/n directly. `auto` → foundation default.
+  if scale != auto {
+    let sc = if type(scale) == str { _scale-presets.at(scale) } else { scale }
+    if "ratio" in sc { user.insert("ratio", sc.ratio) }
+    if "n" in sc { user.insert("n", sc.n) }
   }
 
-  // Rebuild a scale dict with the user's base, keeping its ratio + n.
-  let with-base = s => _scale-make(base: base, ratio: s.params.ratio, n: s.params.n)
-
-  // Merge user fonts with defaults, per category. Apply global scale (if set), then global base.
-  // Top-level `font:` sets the family across every category as a shortcut; per-category
-  // `fonts.<cat>.family` still wins for explicit overrides.
-  //
-  // Within `fonts.<cat>`:
-  //   - `family` / `scale` / `profile` configure the bundle itself.
-  //   - `size` rebuilds the bundle's scale with that size as the new base, so every
-  //     component in the category recomputes coherently from its step.
-  //   - any other keys (`weight`, `fill`, etc.) are collected as per-category overrides
-  //     applied to every component. Per-component `overrides:` beat these; per-call args
-  //     beat both.
-  let _bundle-keys = ("family", "scale", "profile")
-  let resolved-fonts = (:)
-  let cat-overrides = (:)
-  for (cat, default-bundle) in _default-fonts {
-    let user-bundle = fonts.at(cat, default: (:))
-    let bundle-cfg = (:)
-    let cat-ov = (:)
-    let cat-base = none
-    for (k, v) in user-bundle {
-      if _bundle-keys.contains(k) { bundle-cfg.insert(k, v) }
-      else if k == "size" { cat-base = v }
-      else { cat-ov.insert(k, v) }
-    }
-    let base-bundle = if font != none { default-bundle + (family: font) } else { default-bundle }
-    let merged = base-bundle + bundle-cfg
-    if global-scale != auto {
-      merged.insert("scale", global-scale)
-    }
-    let scale-base = if cat-base != none { cat-base } else { base }
-    merged.insert("scale", _scale-make(base: scale-base, ratio: merged.scale.params.ratio, n: merged.scale.params.n))
-    resolved-fonts.insert(cat, merged)
-    cat-overrides.insert(cat, cat-ov)
+  // fonts: `font:` sets one family across every role; `fonts.<role>` overrides per role (family and/or
+  // measured metrics). A bare family (string/tuple) is normalised to `(family: (…,))`. Whatever lands
+  // here is deep-merged onto the foundation's measured defaults by `resolve`, so a family-only override
+  // keeps that role's optical metrics.
+  let _norm-font = cfg => {
+    if type(cfg) == str { (family: (cfg,)) }
+    else if type(cfg) == array { (family: cfg) }
+    else if type(cfg) == dictionary and "family" in cfg and type(cfg.family) == str { (..cfg, family: (cfg.family,)) }
+    else { cfg }
   }
+  let user-fonts = (:)
+  if font != auto {
+    let fam = if type(font) == array { font } else { (font,) }
+    for role in ("body", "heading", "code") { user-fonts.insert(role, (family: fam)) }
+  }
+  for (role, cfg) in fonts {
+    user-fonts.insert(role, user-fonts.at(role, default: (:)) + _norm-font(cfg))
+  }
+  if user-fonts.len() > 0 { user.insert("fonts", user-fonts) }
 
-  let body-bundle = resolved-fonts.body
-  let r = rhythm.make(scale: body-bundle.scale, font: body-bundle.profile, measure: measure)
-  let specs = _build-specs(theme, r.spacing)
+  // the ONE resolved foundation config — every component reads its primitives from `s`.
+  let s = cascade.resolve(user)
+
+  let specs = _build-specs(theme, s)
   let merged-page = _default-page + (fill: theme.bg) + page
+  let body-font = s.fonts.at("body")
 
+  // ── components: each reads the foundation over `s` at its role + step ──
   let result = (:)
   for (name, spec) in specs {
-    let cat-bundle = resolved-fonts.at(spec.category)
-    let cat-state = (
-      scale: cat-bundle.scale,
-      font: cat-bundle.profile,
-      measure: measure,
-      size-min: size-min,
-    )
-    // Family becomes a text-param default; component overrides win over it.
-    let cat-defaults = (font: cat-bundle.family) + spec.defaults
-    let merged-spec = (
-      step: spec.step,
-      defaults: cat-defaults,
-      render: spec.render,
-    )
-    let cat-ov = cat-overrides.at(spec.category, default: (:))
-    let comp-overrides = cat-ov + overrides.at(name, default: (:))
-    result.insert(name, utils.make-component(cat-state, merged-spec, comp-overrides))
+    let cat-state = (s: s, role: spec.category)
+    // The role's family becomes a text-param default; component/per-call overrides win over it.
+    let cat-defaults = (font: s.fonts.at(spec.category).family) + spec.defaults
+    let merged-spec = (step: spec.step, defaults: cat-defaults, render: spec.render)
+    result.insert(name, utils.make-component(cat-state, merged-spec, overrides.at(name, default: (:))))
   }
 
-  // Page rule — applies page settings and sets default text font/fill from body bundle.
+  // ── page rule — page settings + default text font/fill from the body role ──
   let page-rule = body => {
     set std.page(..merged-page)
-    set text(font: body-bundle.family, fill: theme.fg)
+    set text(font: body-font.family, fill: theme.fg)
     body
   }
   result.insert("page", page-rule)
 
-  // Markup rule — binds native Typst elements to our components. Apply via
-  // `#show: l.markup`. Body defaults match text-3 (body-category scale step 0).
-  let body-size = (body-bundle.scale.size)(0)
-  let body-tracking = (body-bundle.profile.tracking)(body-size)
-  let body-spacing = (body-bundle.profile.word-space)(body-size)
-  let body-leading = (body-bundle.profile.leading)(body-size, measure: measure)
-
+  // ── markup rule — native Typst elements → our components; body defaults = text-3 (body, step 0) ──
+  // Vertical rhythm is the foundation's metric-independent line box: the per-line height is carried by
+  // the text's top/bottom edge (set below and per component), and paragraphs advance on the baseline.
+  let bf = body-font
   let markup-rule = body => {
-    // ── set rules ──
     set text(
-      font: body-bundle.family,
-      size: body-size,
-      tracking: body-tracking,
-      spacing: body-spacing,
+      font: bf.family,
+      size: cascade.size(s, 0),
+      tracking: cascade.tracking(s, bf, 0),
+      spacing: 100% + cascade.word-space(s, bf, 0),
+      top-edge: cascade.top-edge(s, bf, 0),
+      bottom-edge: cascade.bottom-edge(s, bf, 0),
       fill: theme.fg,
     )
-    // Paragraph spacing derives from the rhythm baseline (one line), so inter-
-    // paragraph gaps stay on the vertical grid instead of Typst's default.
-    set par(leading: body-leading, justify: justify, spacing: r.baseline)
+    set par(leading: 0pt, justify: justify, spacing: cascade.baseline(s))
     set std.footnote.entry(
       separator: line(length: 30%, stroke: 0.5pt + theme.rule),
       clearance: 1em,
@@ -228,10 +194,8 @@
     show std.heading.where(level: 4): it => (result.heading-4)(it.body)
     show std.strong: it => (result.strong)(it.body)
     show std.emph: it => (result.emphasis)(it.body)
-    // `link` styling — break recursion by detecting an already-underlined body.
-    // First pass wraps in underline + colored text + re-emits link to preserve
-    // click semantics. Second pass sees body is already an underline element
-    // and passes through.
+    // `link` styling — break recursion by detecting an already-underlined body. First pass wraps in
+    // underline + colored text + re-emits link to preserve click semantics; second pass passes through.
     show std.link: it => if it.body.func() == underline {
       it
     } else {
@@ -247,16 +211,15 @@
     show std.quote: it => (result.quote)(attribution: it.attribution, it.body)
     show std.figure.caption: it => (result.figure-caption)(it.body)
     show std.footnote.entry: it => (result.footnote-entry)(it)
-    // `figure` itself isn't bound — our figure component re-emits a figure
-    // element, which would recurse. Use `#figure-comp(...)` explicitly.
+    // `figure` itself isn't bound — our figure component re-emits a figure element, which would
+    // recurse. Use `#figure(...)` (the component) explicitly.
 
     body
   }
   result.insert("markup", markup-rule)
 
   result.insert("theme", theme)
-  result.insert("scale", resolved-fonts.body.scale)
-  result.insert("rhythm", r)
+  result.insert("spec", s)   // the resolved foundation config — introspect / feed the primitives directly
 
   result
 }

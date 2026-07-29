@@ -1,4 +1,5 @@
 #import "layout.typ" as rl
+#import "foundation.typ"
 
 // Landscape, narrow margins → maximize horizontal room for side-by-side scales.
 #set page(paper: "us-letter", margin: 0.4in, flipped: true)
@@ -16,12 +17,13 @@
 
 #let sample(name) = {
   let l = rl.make(scale: name, measure: 35)
-  let h1-size = (l.scale.size)(4)
+  let hfam = l.spec.fonts.heading.family
+  let h1-size = foundation.size(l.spec, 4)
 
   layout(avail => {
     // Measure raw text (not the component) — inline text measurement is
     // unconstrained by column width, giving the true natural width.
-    let nat = measure(text(size: h1-size, weight: 700, font: "Libertinus Serif")[Heading 1])
+    let nat = measure(text(size: h1-size, weight: 700, font: hfam)[Heading 1])
     let factor = calc.min(1.0, avail.width / nat.width)
 
     let samples = block(breakable: true)[
@@ -38,7 +40,7 @@
 
     // Label stays at full size; only the type samples scale proportionally.
     block(breakable: true)[
-      #text(size: 10pt, weight: 700, font: "Libertinus Serif", fill: rgb("#0050a8"))[#name]
+      #text(size: 10pt, weight: 700, font: hfam, fill: rgb("#0050a8"))[#name]
       #v(0.4em)
       #if factor < 1.0 {
         scale(x: factor * 100%, y: factor * 100%, reflow: true, samples)
@@ -53,9 +55,9 @@
 
 #v(0.5em)
 
-All samples use the same 11pt body, same font (Libertinus Serif), same theme.
-The only difference between columns is the `scale:` parameter. Heading
-sizes derive from `f₀ × r^(i/n)` per Mortensen's formula.
+All samples use the same 11pt body, same fonts, same theme. The only difference
+between columns is the `scale:` parameter — the foundation's modular ratio/n.
+Heading sizes derive from `f₀ × r^(i/n)` per Mortensen's formula.
 
 #v(1em)
 

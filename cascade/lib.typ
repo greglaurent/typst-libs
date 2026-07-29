@@ -1,31 +1,29 @@
 // Cascade — typography system for Typst.
 //
-// Re-exports the public modules. Typical usage:
+// Composition (named callable components + `page`/`markup` show rules) built on top of the cascade
+// foundation — the generated `foundation.typ`, projected from one spec. Typical usage:
 //
-//   #import "@local/cascade:0.1.0": layout, rhythm
+//   #import "@local/cascade:0.1.0": layout
 //   #let l = layout.make()
 //   #show: l.page
 //   #show: l.markup
 //   = Heading
 //   Body with *bold* and _italic_ and `code`.
 //
-// Or pull a single module:
+// Or reach the foundation primitives directly to design your own components with it:
 //
-//   #import "@local/cascade:0.1.0": layout
-//   #let l = layout.make(scale: "golden-ditonic")
+//   #import "@local/cascade:0.1.0": foundation
+//   #let s = foundation.resolve((base: 12pt))
+//   #text(size: foundation.size(s, 4), ...)[Display]
 //
 // Modules:
-//   layout — named callable components (headings, body, lists, quotes, etc.)
-//            plus `page` and `markup` show rules. Top-level entry point.
-//   font   — optical profile (tracking / leading / word-space as size-dependent
-//            functions) and family + scale + profile bundles.
-//   scale  — Mortensen-style typographic scale: f_i = f_0 · r^(i / n).
-//   rhythm — vertical rhythm: baseline grid + spacing tokens derived from
-//            scale + font + measure.
-//   theme  — semantic color tokens (fg, bg, accent, …) with light/dark presets.
+//   layout     — named callable components (headings, body, lists, quotes, …) + `page`/`markup`
+//                show rules. Top-level entry point.
+//   theme      — semantic colour tokens with light/dark presets.
+//   foundation — the GENERATED typographic foundation: an overridable config → computed primitives
+//                (size / tracking / leading / rhythm). Regenerate with `just gen-foundation`; never
+//                edit by hand — it is projected from the cascade-typeset spec.
 
 #import "layout.typ"
-#import "font.typ"
-#import "scale.typ"
-#import "rhythm.typ"
 #import "theme.typ"
+#import "foundation.typ"

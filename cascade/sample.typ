@@ -1,19 +1,18 @@
 // Cascade — usage sample. Run with `just sample` (or `typst compile sample.typ`).
 //
 // When imported as a linked local package, the line below becomes:
-//   #import "@local/cascade:0.1.0": layout, rhythm
+//   #import "@local/cascade:0.1.0": layout, foundation
 
-#import "lib.typ": layout, rhythm
+#import "lib.typ": layout, foundation
 
 #let l = layout.make(
   theme: layout.theme.presets.light,
-  measure: 65,
   scale: "golden-ditonic",
   page: (paper: "us-letter", margin: 1in, numbering: "1"),
-  // Default fonts: serif body + heading, mono code (all Typst-bundled).
-  // Demonstrate switching: sans heading on serif body.
+  // Default fonts come from the foundation (Inter body, Lora heading, IBM Plex Mono code).
+  // Demonstrate switching a role's family — metrics deep-merge from the foundation default:
   fonts: (
-    heading: layout.font.bundles.sans,
+    heading: "Inter",
   ),
 )
 
@@ -105,6 +104,7 @@
 
 // ─── Per-call overrides ────────────────────────────────────────────────────────
 #text-3(weight: 700, fill: rgb("#222"))[Per-call: bold + dark gray.]
+#text-3(size: 14pt)[Per-call size: 14pt — tracking and line box recompute from the foundation.]
 #link(dest: "https://example.com", underline-stroke: 1pt, fill: red)[
   Red link with custom underline stroke.
 ]
@@ -144,40 +144,28 @@
   documents where ragged-right would feel out of place.
 ]
 
-// ─── Vertical rhythm ───────────────────────────────────────────────────────────
-#let r = rhythm.make(
-  scale: layout.font.bundles.serif.scale,
-  font: layout.font.bundles.serif.profile,
-  measure: 65,
-  grid-unit: 4pt,
-)
-
+// ─── Vertical rhythm (read straight from the foundation) ────────────────────────
+#let s = l.spec
 #text-3[
-  Rhythm params: unit = #r.unit, baseline = #r.baseline,
-  atomic-divisor = #r.params.atomic-divisor.
+  Rhythm: baseline = #foundation.baseline(s), unit = #foundation.unit(s),
+  measure width = #foundation.measure-width(s).
 ]
 
 #text-3[
-  Spacing scale: n1 = #r.spacing.n1, base = #r.spacing.base, p1 = #r.spacing.p1,
-  p2 = #r.spacing.p2, p3 = #r.spacing.p3, p4 = #r.spacing.p4, p5 = #r.spacing.p5, p6 = #r.spacing.p6.
+  Spacing scale: n1 = #foundation.space(s, "n1"), base = #foundation.space(s, "0"),
+  p1 = #foundation.space(s, "p1"), p2 = #foundation.space(s, "p2"), p3 = #foundation.space(s, "p3"),
+  p4 = #foundation.space(s, "p4"), p5 = #foundation.space(s, "p5"), p6 = #foundation.space(s, "p6").
 ]
 
-// Snap functions
-#let (unit, baseline, spacing, snap, params) = r
-#text-3[
-  Snap 17.4pt to unit: #snap(17.4pt). Snap 17.4pt to baseline: #snap(17.4pt, multiple: baseline).
-]
-
-// Apply rhythm spacing to layout components via overrides
+// Apply foundation spacing to layout components via overrides
 #let l-rhythmed = layout.make(
-  measure: 65,
   overrides: (
-    code-block: (block-inset: spacing.p2),
-    quote: (block-inset: (left: spacing.p3)),
+    code-block: (block-inset: foundation.space(s, "p2")),
+    quote: (block-inset: (left: foundation.space(s, "p3"))),
   ),
 )
 #(l-rhythmed.quote)[
-  Quote with rhythm-derived left inset (#spacing.p3).
+  Quote with rhythm-derived left inset (#foundation.space(s, "p3")).
 ]
 
 // ─── Native markup mode ────────────────────────────────────────────────────────
@@ -189,7 +177,7 @@
 == Native markup heading 2
 
 This is a plain paragraph written in pure Typst markup. It picks up text-3's
-defaults (size, tracking, word-space, leading, fill) from the markup show rule.
+defaults (size, tracking, word-space, line box, fill) from the markup show rule.
 *Bold inline* and _italic inline_ work via our strong/emphasis components.
 `Inline code` routes through the code component. And a markup link to
 #link("https://typst.app")[Typst] gets the theme accent color plus underline.
@@ -217,7 +205,7 @@ fn native_markup() -> Result<(), Box<dyn Error>> {
 = Footnotes
 
 This paragraph has a footnote#footnote[The footnote text is set in
-  text-2 (one step below body) and uses the muted foreground color, with
+  text-1 (two steps below body) and uses the muted foreground color, with
   a 30% rule above the entries.] right here. And a second one#footnote[Footnotes
   appear at the bottom of the page they reference, with a thin rule above.]
 to demonstrate gap spacing.

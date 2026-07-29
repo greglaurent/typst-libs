@@ -4,4 +4,4 @@ version = "0.1.0"
 entrypoint = "lib.typ"
 authors = ["Greg Laurent <gregory.m.laurent@gmail.com>"]
 license = "MIT"
-description = "Typography system for Typst: typographic scale, optical font profile, vertical rhythm, theme, and named callable components composed from per-category font bundles."
+description = "Typography system for Typst: named callable components + page/markup show rules, composed on the cascade foundation (a spec-projected foundation of scale, optical profile, and vertical rhythm) with a light/dark theme."

@@ -4,6 +4,21 @@
 default:
     @just --list
 
+# Regenerate cascade/foundation.typ from the cascade-typeset renderer — the authoritative source of
+# the typographic foundation (one spec, projected to Typst). Run after the spec changes.
+# `cascade/foundation.typ` is GENERATED: never hand-edit it, edit the spec and regenerate.
+#   just gen-foundation                       # assumes ../cascade-typeset
+#   just gen-foundation ~/src/cascade-typeset # explicit path
+gen-foundation cascade-typeset="../cascade-typeset":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    src="{{ cascade-typeset }}"
+    tmp="$(mktemp -d)"
+    trap 'rm -rf "$tmp"' EXIT
+    ( cd "$src" && cargo run -q -p cascade-cli -- build --target typst --out "$tmp/dist" )
+    cp "$tmp/dist/cascade.typ" cascade/foundation.typ
+    echo "Regenerated cascade/foundation.typ from $src"
+
 # Symlink a library directory into Typst's local-package namespace so
 # `#import "@local/<name>:<version>": ...` resolves to the working tree.
 # Reads name + version from <dir>/typst.toml. Idempotent.

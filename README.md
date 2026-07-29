@@ -4,7 +4,7 @@ Collection of [Typst](https://typst.app) libraries.
 
 ## Libraries
 
-- **[cascade](cascade/)** — typography system: typographic scale, optical font profile, vertical rhythm, theme, and named callable components.
+- **[cascade](cascade/)** — typography system: named callable components + `page`/`markup` show rules and a light/dark theme, composed on the **cascade foundation** (`cascade/foundation.typ`) — the typographic scale, optical profile, and vertical rhythm projected from the cascade-typeset spec. Regenerate the foundation with `just gen-foundation`; never edit it by hand.
 
 ## Local install
 

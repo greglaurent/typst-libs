@@ -3,6 +3,13 @@
 // Imported by layout.typ (and any future style modules that need the same machinery).
 // All names here are intended to be called from other style files; they have no
 // leading underscore.
+//
+// Typography is NOT computed here — it is sourced from the cascade foundation (the generated
+// `foundation.typ`, projected from the one spec). This module owns only COMPOSITION: it reads the
+// foundation's primitives (`size` / `tracking` / `word-space` / `top-edge` / `bottom-edge`) over a
+// resolved config `s` and assembles them into the named, overridable components.
+
+#import "foundation.typ" as cascade
 
 // Meta-keys trigger recomputation of size + tracking + word-space + leading
 // from scale/font/measure. Other args are passed through as plain style tweaks.
@@ -33,15 +40,17 @@
   (meta: meta, real: real)
 }
 
-#let compute(step, scale, font, measure, size-min: 0pt) = {
-  // Readability floor: never smaller than size-min (a rendering concern, not the
-  // scale — scale.size stays pure). Optical is recomputed from the floored size.
-  let size = calc.max((scale.size)(step), size-min)
+#let compute(step, s, role) = {
+  // Every value is the FOUNDATION's primitive computed over the resolved config `s` (the readability
+  // floor lives inside `size`). Vertical rhythm is the metric-independent line box (top/bottom edge)
+  // the foundation uses — set on the text, paired with the global `par(leading: 0pt, spacing: baseline)`.
+  let f = s.fonts.at(role)
   (
-    size: size,
-    tracking: (font.tracking)(size),
-    spacing: (font.word-space)(size),
-    leading: (font.leading)(size, measure: measure),
+    size: cascade.size(s, step),
+    tracking: cascade.tracking(s, f, step),
+    spacing: 100% + cascade.word-space(s, f, step),
+    top-edge: cascade.top-edge(s, f, step),
+    bottom-edge: cascade.bottom-edge(s, f, step),
   )
 }
 
@@ -191,28 +200,32 @@
 // per-component overrides, per-call args), handles meta-key recomputation, and
 // dispatches to the spec's render function.
 
-#let _from-size(s, spec-step, font, measure) = {
+#let _from-size(sz, s, role, spec-step) = {
+  // A direct `size:` override. Invert the modular scale to the (fractional) step that yields this
+  // size, so the foundation recomputes tracking / word-space / line box coherently from it:
+  //   size = base · ratio^(step / n)   ⇒   step = n · ln(size / base) / ln(ratio).
+  let f = s.fonts.at(role)
+  let step = s.n * calc.ln(sz / s.base) / calc.ln(s.ratio)
   let r = (
-    size: s,
-    tracking: (font.tracking)(s),
-    spacing: (font.word-space)(s),
+    size: sz,
+    tracking: cascade.tracking(s, f, step),
+    spacing: 100% + cascade.word-space(s, f, step),
   )
-  // Leading is paragraph-level — only emit it for block-y components (those with a step).
-  // Inline components (step: none) wrapped in `set par(leading: …)` would force a line break.
+  // Line box only for block-y components (those with a step). Inline components (step: none) inherit
+  // the surrounding line box; setting their own top/bottom edge would break the line.
   if spec-step != none {
-    r.insert("leading", (font.leading)(s, measure: measure))
+    r.insert("top-edge", cascade.top-edge(s, f, step))
+    r.insert("bottom-edge", cascade.bottom-edge(s, f, step))
   }
   r
 }
 
 #let _compute-meta(meta, spec-step, state) = {
   if "size" in meta {
-    _from-size(meta.size, spec-step, state.font, state.measure)
+    _from-size(meta.size, state.s, state.role, spec-step)
   } else {
     let step = meta.at("step", default: spec-step)
-    if step == none { (:) } else {
-      compute(step, state.scale, state.font, state.measure, size-min: state.at("size-min", default: 0pt))
-    }
+    if step == none { (:) } else { compute(step, state.s, state.role) }
   }
 }
 

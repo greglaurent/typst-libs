@@ -23,7 +23,7 @@
   word-space-k: 0.04, code-scale: 0.9,
   page: (paper: "us-letter", margin: auto),
   spacing-factors: ("n1": 0.5, "0": 1, "p1": 2, "p2": 3, "p3": 4, "p4": 6, "p5": 8, "p6": 12),
-  fonts: (body: (family: ("Inter",), xh: 0.546, lb: 1.3, kt: 0.078, ws: 0.26), heading: (family: ("Lora",), xh: 0.5, lb: 1.2, kt: 0.078, ws: 0.28), code: (family: ("IBM Plex Mono",), xh: 0.516, lb: 1.35, kt: 0, ws: 0)),
+  fonts: (body: (family: ("Inter",), x-height: 0.546, leading-base: 1.3, tracking-k: 0.078, word-space: 0.26), heading: (family: ("Lora",), x-height: 0.5, leading-base: 1.2, tracking-k: 0.078, word-space: 0.28), code: (family: ("IBM Plex Mono",), x-height: 0.516, leading-base: 1.35, tracking-k: 0, word-space: 0)),
 )
 
 // ── baked palette (light) — print colour is medium-specialized, not a config knob (yet) ──
@@ -60,11 +60,11 @@
 #let _ln-ratio(s) = calc.ln(s.ratio)
 #let _factor(s, step) = calc.pow(s.ratio, step / s.n)
 #let _size(s, step) = calc.max(s.base * _factor(s, step), s.size-min)
-#let _code-size(s, step) = _size(s, step) * (s.fonts.body.xh / s.fonts.code.xh) * s.code-scale
-#let _lead0(s, f) = f.lb + (s.measure - 65) * 0.006 - (f.xh - 0.5) * 0.8
+#let _code-size(s, step) = _size(s, step) * (s.fonts.body.x-height / s.fonts.code.x-height) * s.code-scale
+#let _lead0(s, f) = f.leading-base + (s.measure - 65) * 0.006 - (f.x-height - 0.5) * 0.8
 #let _leading(s, f, step) = calc.clamp(_lead0(s, f) - 0.1 * (step / s.n) * _ln-ratio(s), s.leading.min, s.leading.max)
-#let _tracking(s, f, step) = { let k = if step > 0 { f.kt * s.tracking.tighten-ratio } else { f.kt }; (calc.clamp(-1 * k * (step / s.n) * _ln-ratio(s), -1 * s.tracking.tighten-max, s.tracking.loosen-max)) * 1em }
-#let _word-space(s, f, step) = (f.ws - s.word-space-k * (step / s.n) * _ln-ratio(s)) * 1em
+#let _tracking(s, f, step) = { let k = if step > 0 { f.tracking-k * s.tracking.tighten-ratio } else { f.tracking-k }; (calc.clamp(-1 * k * (step / s.n) * _ln-ratio(s), -1 * s.tracking.tighten-max, s.tracking.loosen-max)) * 1em }
+#let _word-space(s, f, step) = (f.word-space - s.word-space-k * (step / s.n) * _ln-ratio(s)) * 1em
 #let _baseline(s) = s.base * _leading(s, s.fonts.body, 0)
 #let _unit(s) = _baseline(s) * s.rhythm-ratio
 #let _measure-width(s) = s.measure * s.avg-advance * s.base
@@ -195,7 +195,7 @@
   // with the surrounding context; mono is untracked (kt 0).
   show raw.where(block: false): it => box(
     fill: _theme.code-bg, inset: (x: 0.34em), outset: (y: 0.12em), radius: 2.25pt,
-    text(font: _font(s, "code").family, size: (s.fonts.body.xh / s.fonts.code.xh) * s.code-scale * 1em,
+    text(font: _font(s, "code").family, size: (s.fonts.body.x-height / s.fonts.code.x-height) * s.code-scale * 1em,
          fill: _theme.code-fg, it.text),
   )
   // code block — a tinted block at the x-height-matched code size, never hyphenated or justified.

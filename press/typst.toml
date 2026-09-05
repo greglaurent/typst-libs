@@ -1,0 +1,11 @@
+[package]
+name = "press"
+version = "0.1.0"
+entrypoint = "lib.typ"
+authors = ["Greg Laurent <gregory.m.laurent@gmail.com>"]
+license = "MIT"
+description = "Document composition & modularity for Typst: a template + helpers that keep a document's convention and composition generic. Typography-agnostic."
+
+[template]
+path = "template"
+entrypoint = "main.typ"

@@ -1,0 +1,3 @@
+# Throwaway page-preview renders (typst compile main.typ 'page-{p}.png'). The compiled
+# PDF is intentionally NOT ignored — it's sometimes pulled down. assets/ is untouched.
+/page-*.png

@@ -19,6 +19,15 @@ The renderer finds its own content by the matching name. `main.typ` orders the s
 frames them. Nothing is hand-wired: the matched names declare the pairing, so a document only
 ever adds a `content/<x>` + `<x>` pair and lists it in `main`.
 
+## Assets
+
+Images and other binary resources live in a standard **`assets/`** folder at the project root.
+Content stays pure data — it holds the *path string* (`src: "assets/logo.svg"`), and the
+renderer turns it into an image: `#let render(l) = (l.figure)(image(content.src), content.caption)`.
+Because `image()` resolves paths relative to the file that calls it, and renderers sit at the
+project root, an `assets/…` path just works. The scaffold ships an `assets/` folder and a `plate`
+section that demonstrates it.
+
 ## `main.typ`
 
 ```typ
@@ -51,5 +60,5 @@ margins, numbering and fill all come from `l`; press sets nothing static.
 ## Scaffold
 
 `typst init @local/press <name>` copies the `template/` structure — `content/`, matched section
-renderers, and a `main.typ` — as a starting point. Swap the stub `l` in `main.typ` for your
-formatter.
+renderers, an `assets/` folder, and a `main.typ` — as a starting point. Swap the stub `l` in
+`main.typ` for your formatter.

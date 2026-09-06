@@ -10,6 +10,9 @@
 // frames them. press knows nothing about what the sections ARE — any pairs, any order, any
 // structure. Formatting is supplied through `l` — a formatter such as cascade — which press
 // never names or depends on; the two meet only at that parameter.
+//
+// Images and other binary resources live in a standard `assets/` folder at the project root;
+// content holds the path string and the renderer calls `image(content.src)` (see README).
 
 // document — frame an ordered `body` of rendered sections into the finished document, using
 // formatter `l`. `header`/`footer` are section renderers `(l, page) => content`, shown on every

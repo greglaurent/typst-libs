@@ -2,6 +2,7 @@
 #import "title.typ" as title
 #import "essay.typ" as essay
 #import "points.typ" as points
+#import "plate.typ" as plate
 
 // The formatter `l`. press depends on NONE of this — swap it for cascade later and
 // every section re-renders unchanged. It exposes l.page / l.markup and the components
@@ -19,6 +20,11 @@
   lead: it => block(below: 1.2em, text(size: 12pt, style: "italic", fill: luma(90), it)),
   body: it => it,
   rule: () => block(above: 0.2em, below: 0.7em, line(length: 100%, stroke: 0.4pt + luma(160))),
+  figure: (img, caption) => block(above: 1.3em, below: 1.3em, align(center, {
+    img
+    v(0.5em)
+    text(size: 8.5pt, style: "italic", fill: luma(110), caption)
+  })),
 )
 
 // header/footer are section renderers (l, page) => content, shown on every page by
@@ -39,6 +45,7 @@
   title.render(l)
   pagebreak()
   essay.render(l)
+  plate.render(l)
   points.render(l)
 }
 

@@ -9,7 +9,7 @@ default:
 # Reads name + version from <dir>/typst.toml. Idempotent.
 #   just link                  # link every subdir containing typst.toml
 #   just link all              # same as above (explicit)
-#   just link cascade          # link one
+#   just link press          # link one
 link dir="all":
     #!/usr/bin/env bash
     set -euo pipefail
@@ -31,7 +31,7 @@ link dir="all":
     fi
 
 # Remove the symlink installed by `just link <dir>`. Safe if absent.
-#   just unlink cascade
+#   just unlink press
 unlink dir:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -43,3 +43,7 @@ unlink dir:
     else
         echo "No symlink at $target"
     fi
+
+# Compile contract checks and examples. Optionally include a Cascade Typst export.
+check cascade="":
+    python3 tests/check.py --cascade "{{ cascade }}"

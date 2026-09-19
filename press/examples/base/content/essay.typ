@@ -1,9 +1,10 @@
-// This section's content is a plain block of running prose.
+// Meaningful prose markup belongs with the content.
 #let content = [
-  A document, in press, is nothing more than a set of sections. Each section is a
-  matched pair bound by a shared name — the content beside its renderer. Neither the
-  framework nor this page knows what the other sections are.
+  A document in Press is composed through functions. Content files hold prose or
+  structured values. Their paired renderers decide how to present them, drawing on
+  a supplied formatter for typography.
 
-  Because the pairing is by name and the ordering lives in one place, a document grows
-  only by adding a pair and listing it. Structure becomes composition, not configuration.
+  Matching names make the relationship easy to follow. Imports make it explicit.
+  A renderer may combine several sources, and a composition may group other
+  compositions. The document chooses the order; Press supplies no fixed structure.
 ]

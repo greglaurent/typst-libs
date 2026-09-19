@@ -1,9 +1,8 @@
-// This section's content is a dict carrying a heading and a list of items.
 #let content = (
   heading: [Three Properties],
   items: (
-    [Sections are matched pairs, discovered by name — the renderer finds its own content.],
-    [Order is arbitrary: any combination of pairs yields any structure.],
-    [Formatting is external — every visual choice arrives through the formatter `l`.],
+    [Matching filenames pair content with its presentation by convention; renderers import their sources explicitly.],
+    [Composition selects and orders renderers, which can share content and form nested groups.],
+    [The formatter supplies typography; each renderer owns its document-specific arrangement.],
   ),
 )

@@ -116,9 +116,13 @@ The original `hr` and other public exports remain available. Components named
 native heading semantics such as outlines and numbering.
 
 Configuration options and precedence belong to Cascade: exported defaults, then
-supported CLI inputs, then this document's config. Its palette is fixed at export
-time, and its page wrapper currently applies paper and margins rather than every
-Typst page option. Passing an unsupported key does not add that capability. To add
+supported CLI inputs, then this document's config. Current Cascade exports accept
+`theme: "monochrome"` or a partial palette dictionary such as
+`theme: (fg: black, bg: white)`. Footnotes default to the body foreground;
+`footnotes: (fill: black, rule: black)` overrides their text and separator colors.
+These options pass through Press unchanged; regenerate older Cascade exports
+to enable them. The page wrapper currently applies paper and margins rather than
+every Typst page option. Passing an unsupported key does not add that capability. To add
 page numbering or another document-specific behavior, extend the factory:
 
 ```typ

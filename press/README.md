@@ -76,7 +76,7 @@ can choose when to return content. `page` is Typst's page element, suitable for
 
 ```typ
 #import "@local/press:0.1.0": document, cascade-formatter
-#import "@local/cascade:2.0.0" as typography
+#import "@local/cascade:2.1.0" as typography
 #import "poem.typ" as poem
 
 #document(
@@ -84,6 +84,7 @@ can choose when to return content. `page` is Typst's page element, suitable for
   config: (
     base: 12pt,
     measure: 85,
+    scale: "golden-ditonic",
     page: (paper: "us-letter", margin: 1in),
   ),
   compose: l => poem.render(l),
@@ -92,7 +93,7 @@ can choose when to return content. `page` is Typst's page element, suitable for
 
 You may instead import a generated file: `#import "cascade.typ" as typography`.
 Pass the module, not just its `cascade` function. The adapter imports no Cascade
-package itself. It targets the Cascade 2.0 export API with its callable components.
+package itself. It targets the Cascade 2.1 export API with its callable components.
 
 The adapter passes configuration unchanged as named arguments to `cascade` and
 preserves its public exports on `l`, including `heading-1` through `heading-4`,
@@ -116,7 +117,10 @@ The original `hr` and other public exports remain available. Components named
 native heading semantics such as outlines and numbering.
 
 Configuration options and precedence belong to Cascade: exported defaults, then
-supported CLI inputs, then this document's config. Current Cascade exports accept
+supported CLI inputs, then this document's config. Cascade exports every scale
+preset by name, such as `scale: "minor-third"`; an explicit `ratio` or `n`
+overrides that part of the preset. This `scale` config key is separate from the
+`l.scale` component. Current Cascade exports accept
 `theme: "monochrome"` or a partial palette dictionary such as
 `theme: (fg: black, bg: white)`. Footnotes default to the body foreground;
 `footnotes: (fill: black, rule: black)` overrides their text and separator colors.
@@ -147,7 +151,7 @@ typst compile --root . base/main.typ base/press-example.pdf
 typst compile --root . cascade/main.typ cascade/cascade.pdf
 ```
 
-The Cascade example requires the separately installed `@local/cascade:2.0.0`.
+The Cascade example requires the separately installed `@local/cascade:2.1.0`.
 The repository checks can instead use a supplied export in an isolated package
 root; they test configuration propagation, per-call components, running matter,
 composition order, invalid contracts and both examples.

@@ -126,11 +126,11 @@ def main():
         example("template/main.typ")
         example("examples/base/main.typ")
         if cascade is not None:
-            target = packages / "local" / "cascade" / "2.0.0"
+            target = packages / "local" / "cascade" / "2.1.0"
             target.mkdir(parents=True)
             shutil.copyfile(cascade, target / "cascade.typ")
-            (target / "typst.toml").write_text('[package]\nname = "cascade"\nversion = "2.0.0"\nentrypoint = "cascade.typ"\n')
-            values = invoke("cascade-config-components-and-running-matter", r'''#import "@local/cascade:2.0.0" as c
+            (target / "typst.toml").write_text('[package]\nname = "cascade"\nversion = "2.1.0"\nentrypoint = "cascade.typ"\n')
+            values = invoke("cascade-config-components-and-running-matter", r'''#import "@local/cascade:2.1.0" as c
 #let run(base) = document(
   formatter: cascade-formatter.with(c),
   config: (base: base, page: (paper: "a5", margin: 15mm)),
@@ -153,6 +153,17 @@ def main():
 #run(24pt)
 ''', query=True)
             assert values == ["16pt", "override", "24pt", "override"], values
+            # A named scale preset and a raw override pass through Press to Cascade unchanged.
+            invoke("cascade-scale-presets", r'''#import "@local/cascade:2.1.0" as c
+#let run(config, factor) = document(
+  formatter: cascade-formatter.with(c),
+  config: (base: 10pt, ..config),
+  compose: l => (l.heading-1)[#context assert(calc.abs(text.size - 10pt * factor) < 0.01pt) Heading],
+)
+#run((scale: "minor-third"), calc.pow(1.2, 4))
+#run((scale: "classical"), calc.pow(2, 4 / 5))
+#run((scale: "minor-third", n: 2), calc.pow(1.2, 2))
+''')
             example("examples/cascade/main.typ")
         else:
             print("SKIP Cascade integration: supply --cascade /path/to/cascade.typ")
